@@ -18,24 +18,15 @@
       <span class="badge badge-cyan" style="margin-top: 8px;">LIVE TECH QUIZ</span>
     </header>
 
-    <!-- Scan to Join QR Panel -->
-    <section class="qr-container fade-in" id="qr-section">
-      <span class="badge badge-indigo">SCAN TO JOIN</span>
-      <div class="qr-frame">
-        <img id="join-qr-img" src="" alt="Scan to join quiz" style="display: none;">
-        <div id="qr-loading" style="padding: 60px 20px; color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-display);">
-          Generating QR...
-        </div>
-      </div>
-      <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center; max-width: 280px;">
-        Join the live quiz from your phone.
-      </p>
-    </section>
-
     <!-- Team Login Card -->
-    <section class="glass-card login-card fade-in" style="margin-top: 20px;">
+    <section class="glass-card login-card fade-in" style="margin-top: 10px;">
+      <div style="text-align: center; margin-bottom: 8px;">
+        <h2 class="font-display" style="font-size: 1.4rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">ENTER TEAM ID</h2>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">Enter your assigned team code to join the live event.</p>
+      </div>
+
       <div id="session-resume-box" style="display: none; padding: 14px; background: rgba(79, 70, 229, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: var(--radius-md); text-align: center;">
-        <span style="font-size: 0.85rem; color: var(--text-secondary);">Current Session:</span>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Current Active Session:</span>
         <div id="resume-team-code" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: #38bdf8; margin: 4px 0 10px;">TEAM-001</div>
         <div style="display: flex; gap: 10px; justify-content: center;">
           <a href="/quiz" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">CONTINUE TO QUIZ</a>
@@ -63,7 +54,7 @@
 
         <div id="login-error" class="error-banner"></div>
 
-        <button type="submit" id="join-btn" class="btn-primary" style="width: 100%; margin-top: 6px;">
+        <button type="submit" id="join-btn" class="btn-primary btn-emerald" style="width: 100%; margin-top: 6px; padding: 16px; font-size: 1.1rem;">
           JOIN QUIZ
         </button>
       </form>
@@ -82,8 +73,6 @@
     const sessionBox = document.getElementById('session-resume-box');
     const resumeTeamCode = document.getElementById('resume-team-code');
     const clearSessionBtn = document.getElementById('clear-session-btn');
-    const qrImg = document.getElementById('join-qr-img');
-    const qrLoading = document.getElementById('qr-loading');
 
     // Auto-formatting helper for TEAM-XXX
     teamInput.addEventListener('input', (e) => {
@@ -95,20 +84,6 @@
       }
       e.target.value = val;
     });
-
-    // Load QR Code dynamically
-    fetch('/api/qr')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.qrDataUrl) {
-          qrImg.src = data.qrDataUrl;
-          qrImg.style.display = 'block';
-          qrLoading.style.display = 'none';
-        }
-      })
-      .catch(() => {
-        qrLoading.textContent = 'Scan URL: ' + window.location.origin;
-      });
 
     // Check existing stored session
     const savedTeamCode = localStorage.getItem('vibe_team_code');

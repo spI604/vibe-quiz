@@ -317,7 +317,7 @@ class QuizManager {
       questionId: currentQ.id,
       winnerTeamCode: winnerInfo.hasWinner ? winnerInfo.winner.teamCode : null,
       winnerSubmittedAt: winnerInfo.hasWinner ? winnerInfo.winner.submittedAt : null,
-      winnerTimeFormatted: winnerInfo.hasWinner ? winnerInfo.winner.timeFormatted : null,
+      winnerTimeFormatted: winnerInfo.hasWinner ? `${winnerInfo.winner.responseTimeSec}s` : null,
       correctCount: winnerInfo.correctSubmissions.length,
       totalCount: allSubmissions.length
     });
@@ -503,6 +503,46 @@ class QuizManager {
     } else if (this.io && typeof this.io.emit === 'function') {
       this.io.emit('quiz_state_change', hostPayload);
     }
+  }
+
+  // Admin: Unregister a single team
+  unregisterTeam(teamCode) {
+    const team = dbHelpers.unregisterTeam(teamCode);
+    if (!team) return null;
+
+    // Disconnect or notify any active socket for this team
+    if (this.io && this.io.sockets && this.io.sockets.sockets) {
+      for (const [socketId, code] of this.connectedTeams.entries()) {
+        if (code === teamCode) {
+          this.connectedTeams.delete(socketId);
+          const sock = this.io.sockets.sockets.get(socketId);
+          if (sock) {
+            sock.emit('team_unregistered', { teamCode });
+            sock.leave('participant_room');
+            sock.teamId = null;
+            sock.teamCode = null;
+          }
+        }
+      }
+    }
+
+    this.broadcastTeamsCount();
+    this.broadcastStateChange();
+    return team;
+  }
+
+  // Admin: Unregister all teams
+  unregisterAllTeams() {
+    const changes = dbHelpers.unregisterAllTeams();
+    this.connectedTeams.clear();
+
+    if (this.io) {
+      this.io.to('participant_room').emit('team_unregistered', { all: true });
+    }
+
+    this.broadcastTeamsCount();
+    this.broadcastStateChange();
+    return changes;
   }
 }
 

@@ -32,6 +32,8 @@
   const optionButtons = document.querySelectorAll('.option-btn');
   const submissionBanner = document.getElementById('submission-banner');
   const submissionBannerText = document.getElementById('submission-banner-text');
+  const submitActionWrap = document.getElementById('submit-action-wrap');
+  const btnSubmitAnswer = document.getElementById('btn-submit-answer');
 
   const timerRow = document.getElementById('participant-timer-row');
   const timerDisplay = document.getElementById('timer-display');
@@ -58,6 +60,7 @@
   let currentQuizState = null;
   let hasSubmitted = false;
   let selectedOption = null;
+  let pendingOption = null;
   let timerInterval = null;
 
   // Socket Connection
@@ -94,6 +97,15 @@
     updateTimerDisplay(data.remainingSeconds);
   });
 
+  socket.on('team_unregistered', (data) => {
+    if (!data || data.all || data.teamCode === teamCode) {
+      localStorage.removeItem('vibe_team_code');
+      localStorage.removeItem('vibe_team_id');
+      alert(`Team ${teamCode} has been unregistered by the administrator. Redirecting to team join screen.`);
+      window.location.href = '/';
+    }
+  });
+
   // Format seconds to mm:ss
   function formatSeconds(sec) {
     const s = Math.max(0, Math.floor(sec));
@@ -113,23 +125,55 @@
     }
   }
 
-  // Answer Submission Handler
+  // Option Selection Handler (Does NOT submit immediately)
   optionButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       if (hasSubmitted) return;
       if (!currentQuizState || currentQuizState.state !== 'POLLING_ACTIVE') return;
 
       const chosen = btn.getAttribute('data-option');
+      pendingOption = chosen;
+
+      // Highlight selected option and remove from others
+      optionButtons.forEach(b => {
+        if (b.getAttribute('data-option') === chosen) {
+          b.classList.add('selected');
+        } else {
+          b.classList.remove('selected');
+        }
+      });
+
+      // Enable submit button
+      if (submitActionWrap && btnSubmitAnswer) {
+        submitActionWrap.style.display = 'block';
+        btnSubmitAnswer.disabled = false;
+        btnSubmitAnswer.textContent = `CONFIRM & SUBMIT (OPTION ${chosen})`;
+      }
+    });
+  });
+
+  // Explicit Submit Confirmation Handler
+  if (btnSubmitAnswer) {
+    btnSubmitAnswer.addEventListener('click', () => {
+      if (hasSubmitted || !pendingOption) return;
+      if (!currentQuizState || currentQuizState.state !== 'POLLING_ACTIVE') return;
+
+      const chosen = pendingOption;
       hasSubmitted = true;
       selectedOption = chosen;
 
-      // Lock buttons immediately
+      // Lock buttons
       optionButtons.forEach(b => {
         b.disabled = true;
         if (b.getAttribute('data-option') === chosen) {
           b.classList.add('selected');
         }
       });
+
+      // Hide submit button
+      if (submitActionWrap) {
+        submitActionWrap.style.display = 'none';
+      }
 
       // Show instant submission feedback
       submissionBanner.className = 'submission-status submitted';
@@ -144,7 +188,7 @@
         }
       });
     });
-  });
+  }
 
   // Main State Processor
   function handleStateUpdate(data) {
@@ -220,6 +264,8 @@
       timerDisplay.className = 'timer-digits';
       hasSubmitted = false;
       selectedOption = null;
+      pendingOption = null;
+      if (submitActionWrap) submitActionWrap.style.display = 'none';
       return;
     }
 
@@ -253,6 +299,7 @@
         timerStatusLabel.textContent = 'TIME REMAINING';
 
         if (hasSubmitted) {
+          if (submitActionWrap) submitActionWrap.style.display = 'none';
           optionButtons.forEach(b => {
             b.disabled = true;
             if (b.getAttribute('data-option') === selectedOption) {
@@ -265,10 +312,21 @@
         } else {
           optionButtons.forEach(b => b.disabled = false);
           submissionBanner.style.display = 'none';
+          if (submitActionWrap && btnSubmitAnswer) {
+            submitActionWrap.style.display = 'block';
+            if (pendingOption) {
+              btnSubmitAnswer.disabled = false;
+              btnSubmitAnswer.textContent = `CONFIRM & SUBMIT (OPTION ${pendingOption})`;
+            } else {
+              btnSubmitAnswer.disabled = true;
+              btnSubmitAnswer.textContent = 'SELECT AN OPTION TO SUBMIT';
+            }
+          }
         }
       }
 
       if (state === 'POLLING_CLOSED') {
+        if (submitActionWrap) submitActionWrap.style.display = 'none';
         questionStateBadge.className = 'badge badge-gold';
         questionStateBadge.textContent = 'POLLING CLOSED';
         timerStatusLabel.textContent = 'LOCKED';
@@ -289,6 +347,7 @@
       }
 
       if (state === 'ANSWER_REVEALED' || state === 'WINNER_CHECKED') {
+        if (submitActionWrap) submitActionWrap.style.display = 'none';
         questionStateBadge.className = 'badge badge-emerald';
         questionStateBadge.textContent = 'ANSWER REVEALED';
         timerStatusLabel.textContent = 'REVEALED';
@@ -322,7 +381,7 @@
         if (winnerInfo.hasWinner) {
           viewWinner.style.display = 'flex';
           roundWinnerTeam.textContent = winnerInfo.winner.teamCode;
-          roundWinnerTime.textContent = `${winnerInfo.winner.timeFormatted} (${winnerInfo.winner.responseTimeSec}s)`;
+          roundWinnerTime.textContent = `${winnerInfo.winner.responseTimeSec}s`;
         } else {
           viewWinner.style.display = 'flex';
           roundWinnerTeam.textContent = 'NO CORRECT ANSWERS';

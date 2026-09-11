@@ -141,8 +141,15 @@ assert.strictEqual(team2Score.points, 0);
 assert.strictEqual(team1Score.round_wins, 1);
 console.log('✔ Verified cumulative scoring leaderboard logic');
 
+// 13. Test Admin Team Unregistration
+const unreg = quiz.unregisterTeam('TEAM-001');
+assert.ok(unreg, 'Team 1 unregistration should succeed');
+const checkDeleted = dbHelpers.getTeamByCode('TEAM-001');
+assert.strictEqual(checkDeleted, undefined, 'TEAM-001 should be deleted from DB');
+console.log('✔ Verified admin unregisterTeam removes team and submissions');
+
 // Clean up test state
 quiz.stopTimer();
 dbHelpers.resetQuiz();
 
-console.log('\nALL 12 TESTS PASSED PERFECTLY!\n');
+console.log('\nALL 13 TESTS PASSED PERFECTLY!\n');

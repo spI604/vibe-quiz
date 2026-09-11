@@ -444,8 +444,9 @@
 
     if (winnerInfo.hasWinner && winnerInfo.winner) {
       winnerModalTeam.textContent = winnerInfo.winner.teamCode;
-      winnerModalTime.textContent = winnerInfo.winner.timeFormatted;
-      winnerModalResponseSec.textContent = `(+${winnerInfo.winner.responseTimeSec}s)`;
+      winnerModalTime.textContent = `${winnerInfo.winner.responseTimeSec}s`;
+      winnerModalResponseSec.textContent = '';
+      winnerModalResponseSec.style.display = 'none';
 
       winnerModalCorrectList.innerHTML = '';
       winnerInfo.correctSubmissions.forEach((sub, idx) => {
@@ -453,7 +454,7 @@
         row.className = `leaderboard-row ${idx === 0 ? 'gold-first' : ''}`;
         row.innerHTML = `
           <span>${idx === 0 ? '🥇 1st' : (idx === 1 ? '🥈 2nd' : (idx === 2 ? '🥉 3rd' : `#${idx + 1}`))} &nbsp; ${sub.teamCode}</span>
-          <span>${sub.timeFormatted} (+${sub.responseTimeSec}s)</span>
+          <span style="font-family: var(--font-mono); font-weight: 700; color: #34d399;">${sub.responseTimeSec}s</span>
         `;
         winnerModalCorrectList.appendChild(row);
       });
@@ -464,6 +465,7 @@
       winnerModalTeam.style.fontSize = '2.2rem';
       winnerModalTime.textContent = 'No winner declared';
       winnerModalResponseSec.textContent = '';
+      winnerModalResponseSec.style.display = 'none';
       winnerModalCorrectList.innerHTML = `
         <div style="text-align: center; color: var(--text-muted); padding: 12px;">
           No team submitted the correct answer before the deadline.

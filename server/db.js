@@ -252,6 +252,35 @@ const dbHelpers = {
     return db.prepare('SELECT COUNT(*) as count FROM teams').get().count;
   },
 
+  unregisterTeam(teamCode) {
+    const team = db.prepare('SELECT id, team_code FROM teams WHERE team_code = ?').get(teamCode);
+    if (!team) return null;
+    db.prepare('DELETE FROM submissions WHERE team_id = ?').run(team.id);
+    db.prepare('DELETE FROM teams WHERE id = ?').run(team.id);
+    return team;
+  },
+
+  unregisterAllTeams() {
+    db.prepare('DELETE FROM submissions').run();
+    const result = db.prepare('DELETE FROM teams').run();
+    return result.changes;
+  },
+
+  getAllTeamsWithStats() {
+    return db.prepare(`
+      SELECT 
+        t.id, 
+        t.team_code, 
+        t.created_at,
+        COUNT(s.id) as submissions_count,
+        COALESCE(SUM(s.is_correct), 0) as total_points
+      FROM teams t
+      LEFT JOIN submissions s ON t.id = s.team_id
+      GROUP BY t.id
+      ORDER BY t.team_code ASC
+    `).all();
+  },
+
   // Questions
   getQuestions() {
     return db.prepare('SELECT * FROM questions ORDER BY question_order ASC').all();

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Quiz — Admin Team Management</title>
+  <meta name="description" content="Admin console to manage and unregister teams for TechSpardha 2K26 Vibe Quiz">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    .admin-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-height: 100vh;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--panel-border);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .admin-brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-brand .super {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--cyan-accent);
+      text-transform: uppercase;
+    }
+
+    .admin-brand .title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+    }
+
+    .admin-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .admin-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stat-card .label {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .stat-card .val {
+      font-family: var(--font-mono);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .stat-card .val.cyan { color: var(--cyan-accent); }
+    .stat-card .val.emerald { color: var(--emerald-winner); }
+    .stat-card .val.indigo { color: #818cf8; }
+
+    .admin-table-panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .admin-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      outline: none;
+      min-width: 260px;
+      transition: all var(--transition-fast);
+    }
+
+    .search-input:focus {
+      border-color: var(--cyan-accent);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .admin-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .teams-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .teams-table th {
+      padding: 14px 16px;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .teams-table td {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.95rem;
+    }
+
+    .teams-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .team-code-tag {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fda4af;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-danger:hover {
+      background: var(--rose-danger);
+      color: #ffffff;
+      box-shadow: 0 0 16px var(--rose-glow);
+    }
+
+    .toast-banner {
+      padding: 12px 18px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius-md);
+      color: #34d399;
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Modal */
+    .confirm-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .confirm-modal-overlay.active {
+      display: flex;
+    }
+
+    .confirm-modal {
+      max-width: 440px;
+      width: 100%;
+      padding: 30px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-page">
+    
+    <!-- Top Header -->
+    <header class="admin-header">
+      <div class="admin-brand">
+        <span class="super">TECHSPARDHA 2K26 &bull; VIBE CODING</span>
+        <span class="title">ADMIN &bull; TEAM MANAGEMENT</span>
+      </div>
+
+      <div class="admin-nav-links">
+        <a href="/host" class="btn-secondary" style="font-size: 0.85rem; padding: 10px 18px;">
+          HOST CONSOLE &rarr;
+        </a>
+        <a href="/" class="btn-secondary" target="_blank" style="font-size: 0.85rem; padding: 10px 18px;">
+          PARTICIPANT VIEW &nearr;
+        </a>
+      </div>
+    </header>
+
+    <!-- Success Toast -->
+    <div id="toast-msg" class="toast-banner">
+      <span>✔</span>
+      <span id="toast-text">Team successfully unregistered.</span>
+    </div>
+
+    <!-- Stats Summary Row -->
+    <div class="admin-stats-grid">
+      <div class="glass-card stat-card">
+        <span class="label">REGISTERED TEAMS</span>
+        <span id="stat-total-teams" class="val cyan">0</span>
+      </div>
+      <div class="glass-card stat-card">
+        <span class="label">LIVE CONNECTED NOW</span>
+        <span id="stat-connected-teams" class="val emerald">0</span>
+      </div>
+      <div class="glass-card stat-card">
+        <span class="label">TOTAL SUBMISSIONS</span>
+        <span id="stat-total-submissions" class="val indigo">0</span>
+      </div>
+    </div>
+
+    <!-- Main Teams Table Card -->
+    <main class="glass-card admin-table-panel">
+      <div class="admin-toolbar">
+        <div>
+          <input type="text" id="team-search" class="search-input" placeholder="Search by team code (e.g. 001)...">
+        </div>
+
+        <div class="admin-actions-group">
+          <button id="btn-refresh" class="btn-secondary" style="font-size: 0.85rem;">
+            ⟳ REFRESH
+          </button>
+          <button id="btn-clear-all" class="btn-danger" style="font-size: 0.85rem;">
+            UNREGISTER ALL TEAMS
+          </button>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="teams-table">
+          <thead>
+            <tr>
+              <th>Team Code</th>
+              <th>Status</th>
+              <th>Submissions</th>
+              <th>Points</th>
+              <th>Registered At</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="teams-tbody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                Loading registered teams...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <footer style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin-top: auto; padding-top: 20px;">
+      TECHSPARDHA 2K26 &bull; VIBE QUIZ ADMIN CONTROLS
+    </footer>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="confirm-modal-overlay">
+    <div class="glass-card confirm-modal fade-in">
+      <span class="badge badge-danger" style="margin: 0 auto;">CONFIRM UNREGISTRATION</span>
+      <h3 id="modal-title" style="font-family: var(--font-display); font-size: 1.4rem; color: #ffffff;">
+        Unregister Team?
+      </h3>
+      <p id="modal-desc" style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+        This will permanently remove the team and wipe all their submissions so the official team can register fresh.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 8px;">
+        <button id="modal-cancel-btn" class="btn-secondary" style="padding: 10px 24px;">CANCEL</button>
+        <button id="modal-confirm-btn" class="btn-danger" style="padding: 10px 24px;">UNREGISTER NOW</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allTeams = [];
+    let pendingUnregisterCode = null;
+    let pendingClearAll = false;
+
+    const tbody = document.getElementById('teams-tbody');
+    const statTotalTeams = document.getElementById('stat-total-teams');
+    const statConnectedTeams = document.getElementById('stat-connected-teams');
+    const statTotalSubmissions = document.getElementById('stat-total-submissions');
+    const searchInput = document.getElementById('team-search');
+    const btnRefresh = document.getElementById('btn-refresh');
+    const btnClearAll = document.getElementById('btn-clear-all');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastText = document.getElementById('toast-text');
+
+    const confirmModal = document.getElementById('confirm-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-desc');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+
+    function showToast(message) {
+      toastText.textContent = message;
+      toastMsg.style.display = 'flex';
+      setTimeout(() => {
+        toastMsg.style.display = 'none';
+      }, 4000);
+    }
+
+    async function loadTeams() {
+      try {
+        const res = await fetch('/api/admin/teams');
+        const data = await res.json();
+        if (data.success) {
+          allTeams = data.teams || [];
+          statTotalTeams.textContent = data.totalRegistered || allTeams.length;
+          statConnectedTeams.textContent = data.totalConnected || 0;
+          
+          let totalSubs = 0;
+          allTeams.forEach(t => { totalSubs += (t.submissions_count || 0); });
+          statTotalSubmissions.textContent = totalSubs;
+
+          renderTable(filterTeams(searchInput.value));
+        }
+      } catch (err) {
+        console.error('Failed to load teams:', err);
+      }
+    }
+
+    function filterTeams(query) {
+      const q = (query || '').trim().toUpperCase();
+      if (!q) return allTeams;
+      return allTeams.filter(t => t.team_code.includes(q));
+    }
+
+    function formatDate(epochMs) {
+      if (!epochMs) return '—';
+      const d = new Date(epochMs);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function renderTable(teams) {
+      if (!teams || teams.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
+              No registered teams found.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      teams.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <span class="team-code-tag">${t.team_code}</span>
+          </td>
+          <td>
+            ${t.isConnected 
+              ? `<span class="badge badge-emerald"><span class="status-dot emerald" style="width:6px;height:6px;"></span> ONLINE</span>` 
+              : `<span class="badge" style="color: var(--text-muted);">OFFLINE</span>`
+            }
+          </td>
+          <td style="font-family: var(--font-mono);">${t.submissions_count || 0}</td>
+          <td style="font-family: var(--font-mono); font-weight: 700; color: #38bdf8;">${t.total_points || 0} pts</td>
+          <td style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${formatDate(t.created_at)}</td>
+          <td style="text-align: right;">
+            <button class="btn-danger" onclick="confirmUnregister('${t.team_code}')">
+              UNREGISTER
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.confirmUnregister = function(teamCode) {
+      pendingUnregisterCode = teamCode;
+      pendingClearAll = false;
+      modalTitle.textContent = `Unregister ${teamCode}?`;
+      modalDesc.textContent = `This will permanently delete ${teamCode} and wipe all their submitted answers. The actual team can then register fresh with this ID.`;
+      confirmModal.classList.add('active');
+    };
+
+    btnClearAll.addEventListener('click', () => {
+      if (allTeams.length === 0) return;
+      pendingUnregisterCode = null;
+      pendingClearAll = true;
+      modalTitle.textContent = 'Unregister ALL Teams?';
+      modalDesc.textContent = `WARNING: This will wipe all ${allTeams.length} registered teams and all their submissions. This cannot be undone.`;
+      confirmModal.classList.add('active');
+    });
+
+    modalCancelBtn.addEventListener('click', () => {
+      confirmModal.classList.remove('active');
+      pendingUnregisterCode = null;
+      pendingClearAll = false;
+    });
+
+    modalConfirmBtn.addEventListener('click', async () => {
+      confirmModal.classList.remove('active');
+
+      if (pendingClearAll) {
+        try {
+          const res = await fetch('/api/admin/teams/clear-all', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            showToast(data.message || 'All teams unregistered successfully.');
+            loadTeams();
+          }
+        } catch (err) {
+          alert('Failed to clear teams.');
+        }
+        return;
+      }
+
+      if (pendingUnregisterCode) {
+        const code = pendingUnregisterCode;
+        try {
+          const res = await fetch('/api/admin/team/unregister', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teamCode: code })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast(`Team ${code} unregistered and wiped successfully.`);
+            loadTeams();
+          } else {
+            alert(data.message || 'Failed to unregister team.');
+          }
+        } catch (err) {
+          alert('Network error unregistering team.');
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      renderTable(filterTeams(searchInput.value));
+    });
+
+    btnRefresh.addEventListener('click', () => {
+      loadTeams();
+      showToast('Team list refreshed.');
+    });
+
+    // Auto load on open
+    loadTeams();
+    setInterval(loadTeams, 5000); // Polling every 5s for live connection updates
+  </script>
+</body>
+</html>

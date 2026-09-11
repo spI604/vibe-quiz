@@ -62,6 +62,10 @@ app.get('/host', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'host.html'));
 });
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+});
+
 // Team Code Validation: TEAM-001 to TEAM-100
 function validateTeamCode(code) {
   if (!code || typeof code !== 'string') return null;
@@ -150,6 +154,60 @@ app.post('/api/host/login', (req, res) => {
 function isHostAuthenticated(token) {
   return token && hostSessions.has(token);
 }
+
+// Admin API: List all registered teams with connection stats
+app.get('/api/admin/teams', (req, res) => {
+  try {
+    const teams = dbHelpers.getAllTeamsWithStats();
+    const connectedSet = new Set(quizManager.connectedTeams.values());
+    const result = teams.map(t => ({
+      ...t,
+      isConnected: connectedSet.has(t.team_code)
+    }));
+    res.json({
+      success: true,
+      teams: result,
+      totalConnected: connectedSet.size,
+      totalRegistered: teams.length
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin API: Unregister single team
+app.post('/api/admin/team/unregister', (req, res) => {
+  try {
+    const { teamCode } = req.body;
+    if (!teamCode) {
+      return res.status(400).json({ success: false, error: 'TEAM_CODE_REQUIRED' });
+    }
+    const cleanCode = teamCode.trim().toUpperCase();
+    const removed = quizManager.unregisterTeam(cleanCode);
+    if (!removed) {
+      return res.status(404).json({ success: false, error: 'TEAM_NOT_FOUND', message: `Team ${cleanCode} does not exist.` });
+    }
+    res.json({
+      success: true,
+      message: `Team ${cleanCode} unregistered and wiped successfully.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin API: Unregister all teams
+app.post('/api/admin/teams/clear-all', (req, res) => {
+  try {
+    const count = quizManager.unregisterAllTeams();
+    res.json({
+      success: true,
+      message: `All ${count} teams unregistered successfully.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Socket.io Real-time Communication
 io.on('connection', (socket) => {
