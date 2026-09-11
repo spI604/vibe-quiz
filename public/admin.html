@@ -238,8 +238,41 @@
         <a href="/" class="btn-secondary" target="_blank" style="font-size: 0.85rem; padding: 10px 18px;">
           PARTICIPANT VIEW &nearr;
         </a>
+        <button id="btn-lock" class="btn-secondary" style="font-size: 0.85rem; padding: 10px 16px; border-color: rgba(244, 63, 94, 0.35); color: #fda4af;" title="Lock Admin Console">
+          🔒 LOCK
+        </button>
       </div>
     </header>
+
+    <!-- ADMIN AUTHENTICATION MODAL -->
+    <div id="admin-auth-overlay" class="confirm-modal-overlay" style="display: none;">
+      <div class="glass-card confirm-modal fade-in" style="max-width: 420px; z-index: 1001;">
+        <span class="badge badge-indigo" style="margin: 0 auto;">ADMIN ACCESS RESTRICTED</span>
+        <h2 style="font-family: var(--font-display); font-size: 1.6rem; color: #ffffff; margin: 4px 0;">
+          ADMIN EVENT KEY
+        </h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 6px;">
+          Enter the authorized Event Key to access team management and unregistration controls.
+        </p>
+
+        <form id="admin-auth-form" style="display: flex; flex-direction: column; gap: 14px; text-align: left;">
+          <input 
+            type="password" 
+            id="admin-password-input" 
+            class="search-input" 
+            placeholder="Enter Password (9999)" 
+            required 
+            autocomplete="off"
+            style="width: 100%; box-sizing: border-box; padding: 14px 16px; font-size: 1.1rem; text-align: center; letter-spacing: 0.15em;"
+            autofocus
+          >
+          <div id="admin-auth-error" class="toast-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: #fda4af; text-align: center; justify-content: center;"></div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
+            AUTHENTICATE & ENTER
+          </button>
+        </form>
+      </div>
+    </div>
 
     <!-- Success Toast -->
     <div id="toast-msg" class="toast-banner">
@@ -329,6 +362,13 @@
     let allTeams = [];
     let pendingUnregisterCode = null;
     let pendingClearAll = false;
+    let adminToken = sessionStorage.getItem('vibe_admin_token') || sessionStorage.getItem('vibe_host_token') || null;
+
+    const authOverlay = document.getElementById('admin-auth-overlay');
+    const authForm = document.getElementById('admin-auth-form');
+    const authPasswordInput = document.getElementById('admin-password-input');
+    const authError = document.getElementById('admin-auth-error');
+    const btnLock = document.getElementById('btn-lock');
 
     const tbody = document.getElementById('teams-tbody');
     const statTotalTeams = document.getElementById('stat-total-teams');
@@ -346,6 +386,60 @@
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
     const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 
+    function checkAuth() {
+      if (adminToken) {
+        authOverlay.style.display = 'none';
+        loadTeams();
+      } else {
+        authOverlay.style.display = 'flex';
+        authPasswordInput.value = '';
+        authPasswordInput.focus();
+      }
+    }
+
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      authError.style.display = 'none';
+      const pwd = authPasswordInput.value.trim();
+      if (!pwd) return;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          adminToken = data.token;
+          sessionStorage.setItem('vibe_admin_token', adminToken);
+          authOverlay.style.display = 'none';
+          loadTeams();
+        } else {
+          authError.textContent = data.message || 'Incorrect password (use 9999).';
+          authError.style.display = 'flex';
+        }
+      } catch (err) {
+        authError.textContent = 'Connection error. Please retry.';
+        authError.style.display = 'flex';
+      }
+    });
+
+    btnLock.addEventListener('click', () => {
+      adminToken = null;
+      sessionStorage.removeItem('vibe_admin_token');
+      sessionStorage.removeItem('vibe_host_token');
+      checkAuth();
+    });
+
+    function getAuthHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken || ''}`,
+        'x-admin-token': adminToken || ''
+      };
+    }
+
     function showToast(message) {
       toastText.textContent = message;
       toastMsg.style.display = 'flex';
@@ -355,8 +449,17 @@
     }
 
     async function loadTeams() {
+      if (!adminToken) return;
       try {
-        const res = await fetch('/api/admin/teams');
+        const res = await fetch('/api/admin/teams', {
+          headers: getAuthHeaders()
+        });
+        if (res.status === 401) {
+          adminToken = null;
+          sessionStorage.removeItem('vibe_admin_token');
+          checkAuth();
+          return;
+        }
         const data = await res.json();
         if (data.success) {
           allTeams = data.teams || [];
@@ -452,7 +555,14 @@
 
       if (pendingClearAll) {
         try {
-          const res = await fetch('/api/admin/teams/clear-all', { method: 'POST' });
+          const res = await fetch('/api/admin/teams/clear-all', { 
+            method: 'POST',
+            headers: getAuthHeaders()
+          });
+          if (res.status === 401) {
+            checkAuth();
+            return;
+          }
           const data = await res.json();
           if (data.success) {
             showToast(data.message || 'All teams unregistered successfully.');
@@ -469,9 +579,13 @@
         try {
           const res = await fetch('/api/admin/team/unregister', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ teamCode: code })
           });
+          if (res.status === 401) {
+            checkAuth();
+            return;
+          }
           const data = await res.json();
           if (data.success) {
             showToast(`Team ${code} unregistered and wiped successfully.`);
@@ -494,8 +608,8 @@
       showToast('Team list refreshed.');
     });
 
-    // Auto load on open
-    loadTeams();
+    // Check auth on load
+    checkAuth();
     setInterval(loadTeams, 5000); // Polling every 5s for live connection updates
   </script>
 </body>

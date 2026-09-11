@@ -150,13 +150,45 @@ app.post('/api/host/login', (req, res) => {
   });
 });
 
-// Host Auth Middleware for Socket & API
+// Host & Admin Auth Middleware for Socket & API
 function isHostAuthenticated(token) {
   return token && hostSessions.has(token);
 }
 
-// Admin API: List all registered teams with connection stats
-app.get('/api/admin/teams', (req, res) => {
+function verifyAdminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'] || req.headers['authorization']?.replace('Bearer ', '');
+  const passHeader = req.headers['x-admin-password'];
+  if ((token && hostSessions.has(token)) || (passHeader && String(passHeader).trim() === String(HOST_PASSWORD).trim())) {
+    return next();
+  }
+  return res.status(401).json({
+    success: false,
+    error: 'UNAUTHORIZED',
+    message: 'Access denied. Valid Admin Password (9999) or token required.'
+  });
+}
+
+// API: Admin Authentication
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (!password || String(password).trim() !== String(HOST_PASSWORD).trim()) {
+    return res.status(401).json({
+      success: false,
+      error: 'INVALID_PASSWORD',
+      message: 'Access denied. Incorrect Admin Password.'
+    });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  hostSessions.add(token);
+  res.json({
+    success: true,
+    token
+  });
+});
+
+// Admin API: List all registered teams with connection stats (Protected)
+app.get('/api/admin/teams', verifyAdminAuth, (req, res) => {
   try {
     const teams = dbHelpers.getAllTeamsWithStats();
     const connectedSet = new Set(quizManager.connectedTeams.values());
@@ -175,8 +207,8 @@ app.get('/api/admin/teams', (req, res) => {
   }
 });
 
-// Admin API: Unregister single team
-app.post('/api/admin/team/unregister', (req, res) => {
+// Admin API: Unregister single team (Protected)
+app.post('/api/admin/team/unregister', verifyAdminAuth, (req, res) => {
   try {
     const { teamCode } = req.body;
     if (!teamCode) {
@@ -196,8 +228,8 @@ app.post('/api/admin/team/unregister', (req, res) => {
   }
 });
 
-// Admin API: Unregister all teams
-app.post('/api/admin/teams/clear-all', (req, res) => {
+// Admin API: Unregister all teams (Protected)
+app.post('/api/admin/teams/clear-all', verifyAdminAuth, (req, res) => {
   try {
     const count = quizManager.unregisterAllTeams();
     res.json({
