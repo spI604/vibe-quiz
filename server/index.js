@@ -164,7 +164,7 @@ function verifyAdminAuth(req, res, next) {
   return res.status(401).json({
     success: false,
     error: 'UNAUTHORIZED',
-    message: 'Access denied. Valid Admin Password (9999) or token required.'
+    message: 'Access denied. Valid Admin Key or token required.'
   });
 }
 
