@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vibe Quiz — Participant</title>
+  <meta name="description" content="Participant Quiz Interface for TechSpardha 2K26 Vibe Quiz">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/participant.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/vendor/confetti.js"></script>
+</head>
+<body>
+  <canvas id="confetti-canvas"></canvas>
+
+  <main class="participant-page">
+    <!-- Top Navigation Bar -->
+    <header class="participant-nav">
+      <div class="brand-mini">
+        <span class="super">TECHSPARDHA 2K26</span>
+        <span class="title">VIBE QUIZ</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="socket-status" class="status-dot" title="Connected to quiz server"></div>
+        <div class="team-badge-pill">
+          <span id="nav-team-code">TEAM-001</span>
+          <button id="logout-btn" class="logout-btn" title="Switch Team">✕</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Container -->
+    <div class="quiz-container">
+      
+      <!-- VIEW 1: Waiting for Question Screen -->
+      <section id="view-waiting" class="waiting-screen fade-in">
+        <div class="radar-circle">
+          <div class="radar-core"></div>
+        </div>
+        <h2 id="waiting-status-text" class="waiting-title">WAITING FOR QUESTION</h2>
+        <p class="waiting-desc">
+          Stay on this screen. The question and options will appear automatically the moment the host reveals them.
+        </p>
+        <div class="badge badge-cyan" style="margin-top: 8px;">
+          <span id="waiting-q-indicator">Next: Question 1</span>
+        </div>
+      </section>
+
+      <!-- VIEW 2: Question & Options Screen -->
+      <section id="view-question" class="glass-card question-card fade-in" style="display: none;">
+        <div class="question-meta">
+          <span id="question-badge" class="badge badge-indigo">QUESTION 01</span>
+          <span id="question-state-badge" class="badge badge-cyan">POLLING ACTIVE</span>
+        </div>
+
+        <h2 id="question-text" class="question-text">
+          Question placeholder text will appear here...
+        </h2>
+
+        <!-- 4 Large Answer Buttons -->
+        <div id="options-container" class="options-list">
+          <button class="option-btn" data-option="A">
+            <span class="option-letter">A</span>
+            <span class="option-content" id="opt-a-text">Option A</span>
+          </button>
+          <button class="option-btn" data-option="B">
+            <span class="option-letter">B</span>
+            <span class="option-content" id="opt-b-text">Option B</span>
+          </button>
+          <button class="option-btn" data-option="C">
+            <span class="option-letter">C</span>
+            <span class="option-content" id="opt-c-text">Option C</span>
+          </button>
+          <button class="option-btn" data-option="D">
+            <span class="option-letter">D</span>
+            <span class="option-content" id="opt-d-text">Option D</span>
+          </button>
+        </div>
+
+        <!-- Submission Status Banner -->
+        <div id="submission-banner" class="submission-status" style="display: none;">
+          <span id="submission-banner-text">ANSWER SUBMITTED</span>
+        </div>
+      </section>
+
+      <!-- VIEW 3: Winner Round Result Card -->
+      <section id="view-winner" class="glass-card winner-card fade-in" style="display: none;">
+        <span class="badge badge-emerald" style="margin: 0 auto;">FASTEST CORRECT ANSWER</span>
+        <div class="winner-team-title" id="round-winner-team">TEAM-014</div>
+        <div id="round-winner-time" style="font-family: var(--font-mono); color: #34d399; font-size: 1.1rem;">8:41:22 PM</div>
+        <p id="round-winner-summary" style="font-size: 0.85rem; color: var(--text-secondary);">
+          Fastest verified submission recorded by the server.
+        </p>
+      </section>
+
+      <!-- VIEW 4: Final Quiz Complete & Leaderboard -->
+      <section id="view-final" class="glass-card final-standings-card fade-in" style="display: none;">
+        <div style="text-align: center;">
+          <span class="badge badge-gold">QUIZ COMPLETE</span>
+          <h2 class="font-display" style="font-size: 1.8rem; margin-top: 6px; color: #ffffff;">FINAL RESULTS</h2>
+          <div id="my-final-score-pill" style="margin: 12px auto; padding: 8px 16px; background: rgba(79, 70, 229, 0.2); border-radius: var(--radius-full); font-family: var(--font-mono); font-size: 1rem; color: #38bdf8; display: inline-block;">
+            Your Score: 0 pts
+          </div>
+        </div>
+
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Team</th>
+              <th style="text-align: right;">Points</th>
+            </tr>
+          </thead>
+          <tbody id="final-standings-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Bottom Synchronized Timer Bar -->
+      <footer id="participant-timer-row" class="participant-timer-bar fade-in">
+        <div class="timer-label-wrap">
+          <div id="timer-dot" class="status-dot"></div>
+          <span id="timer-status-label">COUNTDOWN</span>
+        </div>
+        <div id="timer-display" class="timer-digits">00:60</div>
+      </footer>
+
+    </div>
+  </main>
+
+  <script src="/js/participant.js"></script>
+</body>
+</html>

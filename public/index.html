@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VIBE QUIZ — TECHSPARDHA 2K26</title>
+  <meta name="description" content="Live Tech Quiz for TechSpardha 2K26 Vibe Coding">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/participant.css">
+</head>
+<body>
+  <main class="participant-page">
+    <!-- Header -->
+    <header class="event-header" style="margin-top: 12px; margin-bottom: 24px;">
+      <span class="event-supertitle">TECHSPARDHA 2K26</span>
+      <span class="event-subtitle">VIBE CODING</span>
+      <h1 class="event-title">VIBE QUIZ</h1>
+      <span class="badge badge-cyan" style="margin-top: 8px;">LIVE TECH QUIZ</span>
+    </header>
+
+    <!-- Scan to Join QR Panel -->
+    <section class="qr-container fade-in" id="qr-section">
+      <span class="badge badge-indigo">SCAN TO JOIN</span>
+      <div class="qr-frame">
+        <img id="join-qr-img" src="" alt="Scan to join quiz" style="display: none;">
+        <div id="qr-loading" style="padding: 60px 20px; color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-display);">
+          Generating QR...
+        </div>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center; max-width: 280px;">
+        Join the live quiz from your phone.
+      </p>
+    </section>
+
+    <!-- Team Login Card -->
+    <section class="glass-card login-card fade-in" style="margin-top: 20px;">
+      <div id="session-resume-box" style="display: none; padding: 14px; background: rgba(79, 70, 229, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: var(--radius-md); text-align: center;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Current Session:</span>
+        <div id="resume-team-code" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: #38bdf8; margin: 4px 0 10px;">TEAM-001</div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <a href="/quiz" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">CONTINUE TO QUIZ</a>
+          <button id="clear-session-btn" class="btn-secondary" style="padding: 10px 16px; font-size: 0.85rem;">SWITCH</button>
+        </div>
+      </div>
+
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="team-id-input">TEAM ID</label>
+          <div class="team-input-wrapper">
+            <input 
+              type="text" 
+              id="team-id-input" 
+              class="team-input" 
+              placeholder="TEAM-001" 
+              maxlength="8" 
+              autocomplete="off" 
+              autocapitalize="characters"
+              required
+            >
+          </div>
+          <span class="input-hint">Valid format: TEAM-001 to TEAM-100</span>
+        </div>
+
+        <div id="login-error" class="error-banner"></div>
+
+        <button type="submit" id="join-btn" class="btn-primary" style="width: 100%; margin-top: 6px;">
+          JOIN QUIZ
+        </button>
+      </form>
+    </section>
+
+    <footer style="margin-top: auto; padding-top: 30px; text-align: center; color: var(--text-muted); font-size: 0.75rem;">
+      TECHSPARDHA 2K26 &bull; VIBE QUIZ SYSTEM
+    </footer>
+  </main>
+
+  <script>
+    const teamInput = document.getElementById('team-id-input');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const joinBtn = document.getElementById('join-btn');
+    const sessionBox = document.getElementById('session-resume-box');
+    const resumeTeamCode = document.getElementById('resume-team-code');
+    const clearSessionBtn = document.getElementById('clear-session-btn');
+    const qrImg = document.getElementById('join-qr-img');
+    const qrLoading = document.getElementById('qr-loading');
+
+    // Auto-formatting helper for TEAM-XXX
+    teamInput.addEventListener('input', (e) => {
+      let val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      if (val && !val.startsWith('TEAM') && !val.startsWith('T')) {
+        if (/^\d+$/.test(val)) {
+          val = 'TEAM-' + val;
+        }
+      }
+      e.target.value = val;
+    });
+
+    // Load QR Code dynamically
+    fetch('/api/qr')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.qrDataUrl) {
+          qrImg.src = data.qrDataUrl;
+          qrImg.style.display = 'block';
+          qrLoading.style.display = 'none';
+        }
+      })
+      .catch(() => {
+        qrLoading.textContent = 'Scan URL: ' + window.location.origin;
+      });
+
+    // Check existing stored session
+    const savedTeamCode = localStorage.getItem('vibe_team_code');
+    if (savedTeamCode) {
+      resumeTeamCode.textContent = savedTeamCode;
+      sessionBox.style.display = 'block';
+      teamInput.value = savedTeamCode;
+    }
+
+    clearSessionBtn.addEventListener('click', () => {
+      localStorage.removeItem('vibe_team_code');
+      localStorage.removeItem('vibe_team_id');
+      sessionBox.style.display = 'none';
+      teamInput.value = '';
+      teamInput.focus();
+    });
+
+    // Handle Login Submission
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.style.display = 'none';
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'CONNECTING...';
+
+      const code = teamInput.value.trim().toUpperCase();
+
+      try {
+        const res = await fetch('/api/team/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamCode: code })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('vibe_team_code', data.team.teamCode);
+          localStorage.setItem('vibe_team_id', data.team.id);
+          window.location.href = '/quiz';
+        } else {
+          loginError.textContent = data.message || 'Invalid Team ID. Use format TEAM-001 through TEAM-100.';
+          loginError.style.display = 'block';
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'JOIN QUIZ';
+        }
+      } catch (err) {
+        loginError.textContent = 'Connection error. Please check your network.';
+        loginError.style.display = 'block';
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'JOIN QUIZ';
+      }
+    });
+  </script>
+</body>
+</html>

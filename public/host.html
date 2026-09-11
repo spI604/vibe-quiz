@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIBE QUIZ — Host Control Console</title>
+  <meta name="description" content="Host Event Console for TechSpardha 2K26 Vibe Quiz">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/host.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/vendor/confetti.js"></script>
+</head>
+<body>
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- HOST AUTHENTICATION MODAL -->
+  <div id="host-auth-overlay" class="host-auth-modal">
+    <div class="glass-card host-auth-card fade-in">
+      <div class="event-header">
+        <span class="event-supertitle">TECHSPARDHA 2K26</span>
+        <h2 class="event-title" style="font-size: 1.8rem;">HOST CONSOLE</h2>
+        <span class="badge badge-indigo" style="margin-top: 6px;">EVENT CONTROL SYSTEM</span>
+      </div>
+
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">
+        Enter Host Event Key to unlock stage controls:
+      </p>
+
+      <form id="host-auth-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <input 
+          type="password" 
+          id="host-password-input" 
+          class="auth-input" 
+          placeholder="••••" 
+          maxlength="10" 
+          autocomplete="off" 
+          required
+        >
+        <div id="host-auth-error" class="error-banner" style="display: none;"></div>
+        <button type="submit" id="host-login-btn" class="btn-primary" style="width: 100%;">
+          AUTHENTICATE & ENTER
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN HOST APPLICATION INTERFACE -->
+  <div class="host-layout" id="host-main-app" style="display: none;">
+    
+    <!-- Top Nav Bar -->
+    <header class="host-top-nav">
+      <div class="host-brand-group">
+        <div class="host-brand-text">
+          <span class="supertitle">TECHSPARDHA 2K26 &bull; VIBE CODING</span>
+          <h1 class="maintitle">VIBE QUIZ</h1>
+        </div>
+        <span class="badge badge-indigo">HOST CONTROL</span>
+      </div>
+
+      <div class="host-metrics-group">
+        <!-- Live Teams Counter -->
+        <div class="metric-pill" title="Live teams connected">
+          <div class="status-dot emerald"></div>
+          <span class="metric-label">TEAMS JOINED</span>
+          <span class="metric-value emerald" id="metric-teams-joined">0</span>
+        </div>
+
+        <!-- Question Counter -->
+        <div class="metric-pill">
+          <span class="metric-label">QUESTION</span>
+          <span class="metric-value cyan" id="metric-question-counter">1 / 15</span>
+        </div>
+
+        <!-- Current State Badge -->
+        <div class="metric-pill">
+          <span class="metric-label">STATUS</span>
+          <span id="metric-state-badge" class="badge badge-cyan">WAITING</span>
+        </div>
+      </div>
+
+      <div class="host-nav-actions">
+        <button id="show-qr-btn" class="btn-secondary" title="Show Join QR Code on Stage">
+          QR CODE
+        </button>
+        <button id="reset-quiz-btn" class="btn-secondary" style="border-color: rgba(244, 63, 94, 0.3); color: #fda4af;" title="Reset Quiz to Q1">
+          RESET
+        </button>
+      </div>
+    </header>
+
+    <!-- Two-Column Stage Grid -->
+    <div class="host-stage-grid">
+      
+      <!-- Primary Stage Area (Left) -->
+      <section class="glass-card host-stage-card">
+        
+        <!-- Top Stage Meta Header -->
+        <div class="stage-top-meta">
+          <div class="question-big-badge">
+            <span id="stage-q-order">QUESTION 01</span>
+            <span id="stage-q-category" class="badge badge-indigo" style="font-size: 0.75rem;">LIVE TECH</span>
+          </div>
+
+          <div id="stage-mini-status" class="badge badge-cyan">
+            READY
+          </div>
+        </div>
+
+        <!-- STATE 1: WAITING HERO -->
+        <div id="stage-view-waiting" class="waiting-hero fade-in">
+          <h2 class="waiting-title-large">READY?</h2>
+          
+          <div class="waiting-qr-panel">
+            <div class="waiting-qr-frame">
+              <img id="host-qr-img" src="" alt="Join QR Code">
+            </div>
+            <div class="waiting-instructions">
+              <h3>SCAN TO JOIN</h3>
+              <p>Join the live quiz from your phone.</p>
+              <div class="waiting-join-url" id="host-join-url-label">http://localhost:3000</div>
+              <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">Live Teams:</span>
+                <span id="waiting-teams-count-pill" class="badge badge-emerald" style="font-size: 0.9rem;">0 TEAMS</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <span style="font-size: 0.95rem; color: var(--text-secondary); font-family: var(--font-display);">Next Question: 1 / 15</span>
+          </div>
+        </div>
+
+        <!-- STATE 2-6: QUESTION & OPTIONS ACTIVE STAGE -->
+        <div id="stage-view-active" class="stage-question-area fade-in" style="display: none;">
+          <h2 id="stage-question-text" class="stage-question-title">
+            Question text loading...
+          </h2>
+
+          <div class="stage-options-grid">
+            <div class="stage-option-card" id="host-opt-a" data-option="A">
+              <span class="opt-letter">A</span>
+              <span class="opt-text" id="host-opt-a-text">Option A</span>
+            </div>
+            <div class="stage-option-card" id="host-opt-b" data-option="B">
+              <span class="opt-letter">B</span>
+              <span class="opt-text" id="host-opt-b-text">Option B</span>
+            </div>
+            <div class="stage-option-card" id="host-opt-c" data-option="C">
+              <span class="opt-letter">C</span>
+              <span class="opt-text" id="host-opt-c-text">Option C</span>
+            </div>
+            <div class="stage-option-card" id="host-opt-d" data-option="D">
+              <span class="opt-letter">D</span>
+              <span class="opt-text" id="host-opt-d-text">Option D</span>
+            </div>
+          </div>
+
+          <!-- Timer & Live Submissions Counter Bar -->
+          <div class="stage-timer-row">
+            <div class="stage-timer-display">
+              <div id="host-timer-dot" class="status-dot"></div>
+              <div>
+                <span style="font-size: 0.75rem; font-family: var(--font-display); font-weight: 700; color: var(--text-secondary); letter-spacing: 0.1em; display: block; text-transform: uppercase;">
+                  COUNTDOWN
+                </span>
+                <span id="host-timer-num" class="stage-timer-ring-num">00:60</span>
+              </div>
+            </div>
+
+            <div class="stage-submissions-metric">
+              <span class="label">SUBMISSIONS RECEIVED</span>
+              <span id="host-submissions-val" class="value">0 / 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE 7: FINAL RESULTS STAGE -->
+        <div id="stage-view-final" class="fade-in" style="display: none; text-align: center; padding: 20px 0;">
+          <span class="badge badge-gold" style="font-size: 0.9rem; padding: 6px 16px;">TECHSPARDHA 2K26</span>
+          <h2 class="waiting-title-large" style="font-size: 2.8rem; margin: 12px 0 24px;">FINAL RESULTS</h2>
+
+          <!-- Champion Spotlight -->
+          <div id="champion-card" style="max-width: 500px; margin: 0 auto 24px; padding: 24px; background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.2) 0%, rgba(18, 21, 30, 0.95) 85%); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: var(--radius-xl); box-shadow: 0 0 40px var(--gold-glow);">
+            <span style="font-family: var(--font-display); font-weight: 800; letter-spacing: 0.2em; color: var(--gold-accent); font-size: 0.85rem; text-transform: uppercase;">🏆 QUIZ CHAMPION</span>
+            <div id="champion-team-code" style="font-family: var(--font-display); font-size: 3rem; font-weight: 900; color: #ffffff; margin: 8px 0;">TEAM-001</div>
+            <div id="champion-score" style="font-family: var(--font-mono); font-size: 1.4rem; color: #fbbf24; font-weight: 700;">12 POINTS</div>
+          </div>
+
+          <!-- Final Leaderboard Table -->
+          <div style="max-height: 320px; overflow-y: auto; max-width: 700px; margin: 0 auto; border: 1px solid var(--panel-border); border-radius: var(--radius-lg); padding: 16px; background: rgba(0, 0, 0, 0.2);">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Team ID</th>
+                  <th style="text-align: center;">Round Wins</th>
+                  <th style="text-align: right;">Total Score</th>
+                </tr>
+              </thead>
+              <tbody id="host-final-standings-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Stage Bottom Control Action Bar -->
+        <footer class="stage-control-bar">
+          <div id="stage-action-hint" style="font-size: 0.9rem; color: var(--text-secondary); font-family: var(--font-display);">
+            Awaiting host command...
+          </div>
+
+          <div class="stage-control-actions">
+            <!-- 1. START QUIZ -->
+            <button id="btn-start-quiz" class="btn-primary" style="display: none;">
+              START QUIZ
+            </button>
+
+            <!-- 2. REVEAL QUESTION -->
+            <button id="btn-reveal-question" class="btn-primary" style="display: none;">
+              REVEAL QUESTION
+            </button>
+
+            <!-- 3. POLLING ACTIVE (Disabled placeholder) -->
+            <button id="btn-polling-active" class="btn-primary" style="display: none;" disabled>
+              POLLING IN PROGRESS...
+            </button>
+
+            <!-- 4. REVEAL ANSWER -->
+            <button id="btn-reveal-answer" class="btn-primary" style="display: none;">
+              REVEAL ANSWER
+            </button>
+
+            <!-- 5. CHECK WINNER -->
+            <button id="btn-check-winner" class="btn-primary btn-emerald" style="display: none;">
+              CHECK WINNER
+            </button>
+
+            <!-- 6. NEXT QUESTION -->
+            <button id="btn-next-question" class="btn-primary" style="display: none;">
+              NEXT QUESTION
+            </button>
+
+            <!-- 7. FINISH / VIEW FINAL RESULTS -->
+            <button id="btn-view-final" class="btn-primary btn-emerald" style="display: none;">
+              VIEW FINAL RESULTS
+            </button>
+          </div>
+        </footer>
+
+      </section>
+
+      <!-- History & Quick Stats Sidebar (Right) -->
+      <aside class="host-sidebar">
+        <div class="glass-card history-card">
+          <div class="sidebar-title">
+            <span>ROUND HISTORY</span>
+            <span class="badge badge-indigo" id="history-count-badge">0 / 15</span>
+          </div>
+
+          <div class="history-list" id="history-items-list">
+            <div style="color: var(--text-muted); font-size: 0.85rem; padding: 20px 10px; text-align: center;">
+              No completed rounds yet.
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- WINNER CHECKED MODAL OVERLAY -->
+  <div id="winner-modal-overlay" class="winner-modal-overlay">
+    <div class="glass-card winner-panel fade-in">
+      <div class="winner-tagline">FASTEST CORRECT SUBMISSION</div>
+      
+      <div id="winner-modal-team" class="winner-team-display">
+        TEAM-014
+      </div>
+
+      <div class="winner-time-pill">
+        <span id="winner-modal-time">8:41:22 PM</span>
+        <span id="winner-modal-response-sec" style="font-size: 0.85rem; opacity: 0.8;">(+2.45s)</span>
+      </div>
+
+      <!-- Top Correct Submissions List -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; color: var(--text-secondary); text-transform: uppercase; text-align: left;">
+          VERIFIED CORRECT TEAMS (ORDER OF ARRIVAL)
+        </span>
+        <div class="correct-teams-leaderboard" id="winner-modal-correct-list">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <div style="margin-top: 12px; display: flex; justify-content: center; gap: 16px;">
+        <button id="winner-modal-close-btn" class="btn-primary" style="padding: 12px 36px;">
+          CONTINUE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOIN QR MODAL (QUICK TOGGLE) -->
+  <div id="qr-modal-overlay" class="winner-modal-overlay">
+    <div class="glass-card fade-in" style="max-width: 440px; width: 100%; padding: 32px; text-align: center; display: flex; flex-direction: column; gap: 20px;">
+      <div class="event-header">
+        <span class="event-supertitle">TECHSPARDHA 2K26</span>
+        <h2 class="event-title" style="font-size: 1.6rem;">SCAN TO JOIN</h2>
+      </div>
+
+      <div class="qr-frame" style="margin: 0 auto;">
+        <img id="qr-modal-img" src="" alt="Join QR Code" style="width: 240px; height: 240px;">
+      </div>
+
+      <div class="waiting-join-url" id="qr-modal-url-label" style="font-size: 0.95rem; margin: 0 auto;">
+        http://localhost:3000
+      </div>
+
+      <button id="qr-modal-close-btn" class="btn-secondary" style="margin-top: 10px;">
+        CLOSE
+      </button>
+    </div>
+  </div>
+
+  <script src="/js/host.js"></script>
+</body>
+</html>
