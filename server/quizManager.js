@@ -95,6 +95,17 @@ class QuizManager {
 
     if (stateInfo.state === 'QUESTION_PREPARED') {
       payload.message = 'WAITING FOR QUESTION';
+      const qNum = (stateInfo.currentQuestionIndex || 0) + 1;
+      payload.questionPlaceholder = {
+        order: qNum,
+        question: `${qNum}. __________`,
+        options: {
+          A: '_____',
+          B: '______',
+          C: '_____',
+          D: '_______'
+        }
+      };
       return payload;
     }
 
@@ -460,13 +471,17 @@ class QuizManager {
   // Broadcast state change to all clients
   broadcastStateChange() {
     const hostPayload = this.getHostPayload();
-    const defaultParticipantPayload = this.getParticipantPayload();
+    const defaultParticipantPayload = {
+      ...this.getParticipantPayload(),
+      isParticipantOnly: true
+    };
 
     if (this.io && typeof this.io.to === 'function') {
       // 1. Send authoritative host payload to host_room
+      this.io.to('host_room').emit('host_state_change', hostPayload);
       this.io.to('host_room').emit('quiz_state_change', hostPayload);
 
-      // 2. Send sanitized participant payload to each participant socket
+      // 2. Send sanitized participant payload to participant_room
       const participantRoom = this.io.sockets && this.io.sockets.adapter && this.io.sockets.adapter.rooms
         ? this.io.sockets.adapter.rooms.get('participant_room')
         : null;
@@ -474,13 +489,16 @@ class QuizManager {
       if (participantRoom && participantRoom.size > 0) {
         for (const socketId of participantRoom) {
           const sock = this.io.sockets.sockets.get(socketId);
-          if (sock) {
-            sock.emit('quiz_state_change', this.getParticipantPayload(sock.teamId));
+          if (sock && !sock.isHost) {
+            sock.emit('quiz_state_change', {
+              ...this.getParticipantPayload(sock.teamId),
+              isParticipantOnly: true
+            });
           }
         }
       } else {
-        // Fallback if room not yet populated
-        this.io.emit('quiz_state_change', defaultParticipantPayload);
+        // Fallback for participants outside room (strictly excluding host_room)
+        this.io.except('host_room').emit('quiz_state_change', defaultParticipantPayload);
       }
     } else if (this.io && typeof this.io.emit === 'function') {
       this.io.emit('quiz_state_change', hostPayload);

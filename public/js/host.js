@@ -165,6 +165,11 @@
     });
 
     socket.on('quiz_state_change', (payload) => {
+      if (payload && payload.isParticipantOnly) return;
+      renderHostState(payload);
+    });
+
+    socket.on('host_state_change', (payload) => {
       renderHostState(payload);
     });
 
@@ -210,14 +215,18 @@
 
   // 4. Render State Machine
   function renderHostState(data) {
+    if (!data) return;
     currentHostState = data;
     const { state, currentQuestionIndex, totalQuestions, currentQuestion, connectedTeamsCount, submissionsCount, history, finalLeaderboard, winnerInfo } = data;
+
+    const qNum = (currentQuestionIndex !== undefined ? currentQuestionIndex : (currentQuestion ? currentQuestion.question_order - 1 : 0)) + 1;
+    const totalQ = totalQuestions || 15;
 
     // Update Top Metric Pills
     metricTeamsJoined.textContent = connectedTeamsCount || 0;
     waitingTeamsCountPill.textContent = `${connectedTeamsCount || 0} TEAMS`;
-    metricQuestionCounter.textContent = `${(currentQuestionIndex || 0) + 1} / ${totalQuestions || 15}`;
-    metricStateBadge.textContent = state.replace('_', ' ');
+    metricQuestionCounter.textContent = `${qNum} / ${totalQ}`;
+    metricStateBadge.textContent = state ? state.replace('_', ' ') : 'WAITING';
 
     // Reset All Buttons Visibility
     btnStartQuiz.style.display = 'none';
@@ -234,7 +243,9 @@
     stageViewFinal.style.display = 'none';
 
     // Reset Option Styles
-    stageOptionCards.forEach(c => c.classList.remove('correct-revealed', 'dimmed'));
+    stageOptionCards.forEach(c => {
+      c.classList.remove('correct-revealed', 'dimmed', 'placeholder-card', 'locked-placeholder');
+    });
 
     // Render Sidebar History
     renderHistory(history || []);
@@ -282,90 +293,105 @@
     }
 
     // ACTIVE STAGE (STATES 2, 3, 4, 5, 6)
-    if (currentQuestion) {
-      stageViewActive.style.display = 'flex';
-      stageQOrder.textContent = `QUESTION ${String(currentQuestion.question_order).padStart(2, '0')}`;
-      hostSubmissionsVal.textContent = `${submissionsCount || 0} / ${connectedTeamsCount || 0}`;
+    // Always render stageViewActive for all active question states
+    stageViewActive.style.display = 'flex';
+    stageQOrder.textContent = `QUESTION ${String(qNum).padStart(2, '0')}`;
+    hostSubmissionsVal.textContent = `${submissionsCount || 0} / ${connectedTeamsCount || 0}`;
 
-      // STATE 2: QUESTION_PREPARED (Strictly hide question until host reveals it!)
-      if (state === 'QUESTION_PREPARED') {
-        stageMiniStatus.className = 'badge badge-indigo';
-        stageMiniStatus.textContent = 'PREPARED (HIDDEN)';
-        stageActionHint.textContent = "Question is hidden from stage and participants. Click 'REVEAL QUESTION' to unveil and start 60s countdown.";
-        
-        stageQuestionText.innerHTML = `
-          <div class="question-hidden-placeholder">
-            <span class="status-dot"></span>
-            <span>QUESTION HIDDEN &bull; CLICK &quot;REVEAL QUESTION&quot; TO UNVEIL</span>
+    // STATE 2: QUESTION_PREPARED (Strictly hide question until host reveals it!)
+    if (state === 'QUESTION_PREPARED') {
+      stageMiniStatus.className = 'badge badge-indigo';
+      stageMiniStatus.textContent = 'PREPARED (HIDDEN)';
+      stageActionHint.textContent = "Question is prepared. Click 'START QUESTION' to unveil and start 60s countdown.";
+
+      // Display exact requested placeholders:
+      // 1. __________
+      // A. _____         B. ______
+      // C. _____       D. _______
+      stageQuestionText.innerHTML = `
+        <div class="placeholder-question-container">
+          <span class="placeholder-q-num">${qNum}.</span>
+          <div class="placeholder-q-content">
+            <span class="placeholder-dashes">__________</span>
+            <span class="placeholder-tag">QUESTION HIDDEN &bull; CLICK &quot;START QUESTION&quot; TO REVEAL</span>
           </div>
-        `;
-        
-        hostOptAText.textContent = 'Option A (Hidden)';
-        hostOptBText.textContent = 'Option B (Hidden)';
-        hostOptCText.textContent = 'Option C (Hidden)';
-        hostOptDText.textContent = 'Option D (Hidden)';
-        stageOptionCards.forEach(c => c.classList.add('locked-placeholder'));
+        </div>
+      `;
 
-        hostTimerNum.textContent = '00:60';
-        hostTimerNum.className = 'stage-timer-ring-num';
-        btnRevealQuestion.style.display = 'inline-flex';
-        return;
-      }
+      hostOptAText.innerHTML = `<span class="placeholder-dashes">_____</span>`;
+      hostOptBText.innerHTML = `<span class="placeholder-dashes">______</span>`;
+      hostOptCText.innerHTML = `<span class="placeholder-dashes">_____</span>`;
+      hostOptDText.innerHTML = `<span class="placeholder-dashes">_______</span>`;
 
-      // STATES 3, 4, 5, 6: Unveil full question and options
+      stageOptionCards.forEach(c => c.classList.add('placeholder-card'));
+
+      hostTimerNum.textContent = '00:60';
+      hostTimerNum.className = 'stage-timer-ring-num';
+
+      // Ensure START QUESTION button is prominently visible
+      btnRevealQuestion.style.display = 'inline-flex';
+      btnRevealQuestion.innerHTML = '▶ START QUESTION';
+      return;
+    }
+
+    // STATES 3, 4, 5, 6: Unveil full question and options
+    if (currentQuestion) {
       stageQuestionText.textContent = currentQuestion.question_text;
       hostOptAText.textContent = currentQuestion.option_a;
       hostOptBText.textContent = currentQuestion.option_b;
       hostOptCText.textContent = currentQuestion.option_c;
       hostOptDText.textContent = currentQuestion.option_d;
-      stageOptionCards.forEach(c => c.classList.remove('locked-placeholder'));
+    }
+    stageOptionCards.forEach(c => c.classList.remove('placeholder-card', 'locked-placeholder'));
 
-      // STATE 3: POLLING_ACTIVE
-      if (state === 'POLLING_ACTIVE') {
-        stageMiniStatus.className = 'badge badge-cyan';
-        stageMiniStatus.textContent = 'POLLING ACTIVE';
-        stageActionHint.textContent = 'Answer submissions are open. Countdown running.';
-        btnPollingActive.style.display = 'inline-flex';
-        // Polling button is strictly disabled while poll is running
-      }
+    // STATE 3: POLLING_ACTIVE
+    if (state === 'POLLING_ACTIVE') {
+      stageMiniStatus.className = 'badge badge-cyan';
+      stageMiniStatus.textContent = 'POLLING ACTIVE';
+      stageActionHint.textContent = 'Answer submissions are open. Countdown running.';
+      btnPollingActive.style.display = 'inline-flex';
+    }
 
-      // STATE 4: POLLING_CLOSED
-      if (state === 'POLLING_CLOSED') {
-        stageMiniStatus.className = 'badge badge-gold';
-        stageMiniStatus.textContent = 'POLLING CLOSED';
-        stageActionHint.textContent = "Time expired. Answers are locked. Click 'REVEAL ANSWER' to show the correct option.";
-        hostTimerNum.textContent = '00:00';
-        hostTimerNum.className = 'stage-timer-ring-num';
-        btnRevealAnswer.style.display = 'inline-flex';
-      }
+    // STATE 4: POLLING_CLOSED
+    if (state === 'POLLING_CLOSED') {
+      stageMiniStatus.className = 'badge badge-gold';
+      stageMiniStatus.textContent = 'POLLING CLOSED';
+      stageActionHint.textContent = "Time expired. Answers are locked. Click 'REVEAL ANSWER' to show the correct option.";
+      hostTimerNum.textContent = '00:00';
+      hostTimerNum.className = 'stage-timer-ring-num';
+      btnRevealAnswer.style.display = 'inline-flex';
+    }
 
-      // STATE 5: ANSWER_REVEALED
-      if (state === 'ANSWER_REVEALED') {
-        stageMiniStatus.className = 'badge badge-emerald';
-        stageMiniStatus.textContent = 'ANSWER REVEALED';
-        stageActionHint.textContent = "Correct answer revealed on stage and participant devices. Click 'CHECK WINNER'.";
-        
+    // STATE 5: ANSWER_REVEALED
+    if (state === 'ANSWER_REVEALED') {
+      stageMiniStatus.className = 'badge badge-emerald';
+      stageMiniStatus.textContent = 'ANSWER REVEALED';
+      stageActionHint.textContent = "Correct answer revealed on stage and participant devices. Click 'CHECK WINNER'.";
+      
+      if (currentQuestion) {
         highlightCorrectOption(currentQuestion.correct_option);
-        btnCheckWinner.style.display = 'inline-flex';
+      }
+      btnCheckWinner.style.display = 'inline-flex';
+    }
+
+    // STATE 6: WINNER_CHECKED
+    if (state === 'WINNER_CHECKED') {
+      stageMiniStatus.className = 'badge badge-emerald';
+      stageMiniStatus.textContent = 'WINNER VERIFIED';
+      if (currentQuestion) {
+        highlightCorrectOption(currentQuestion.correct_option);
       }
 
-      // STATE 6: WINNER_CHECKED
-      if (state === 'WINNER_CHECKED') {
-        stageMiniStatus.className = 'badge badge-emerald';
-        stageMiniStatus.textContent = 'WINNER VERIFIED';
-        highlightCorrectOption(currentQuestion.correct_option);
+      if (winnerInfo) {
+        openWinnerModal(winnerInfo);
+      }
 
-        if (winnerInfo) {
-          openWinnerModal(winnerInfo);
-        }
-
-        if ((currentQuestionIndex || 0) < 14) {
-          stageActionHint.textContent = "Winner confirmed. Click 'NEXT QUESTION' to proceed.";
-          btnNextQuestion.style.display = 'inline-flex';
-        } else {
-          stageActionHint.textContent = "All 15 questions completed! Click 'VIEW FINAL RESULTS'.";
-          btnViewFinal.style.display = 'inline-flex';
-        }
+      if (qNum < totalQ) {
+        stageActionHint.textContent = `Round winner recorded. Click 'NEXT QUESTION' to proceed to Question ${qNum + 1}.`;
+        btnNextQuestion.style.display = 'inline-flex';
+      } else {
+        stageActionHint.textContent = "All 15 questions completed! Click 'VIEW FINAL RESULTS'.";
+        btnViewFinal.style.display = 'inline-flex';
       }
     }
   }

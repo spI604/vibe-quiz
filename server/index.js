@@ -211,6 +211,7 @@ io.on('connection', (socket) => {
     const { token, password } = data || {};
     if (isHostAuthenticated(token) || (password && String(password).trim() === String(HOST_PASSWORD).trim())) {
       authenticatedHost = true;
+      socket.isHost = true;
       socket.join('host_room');
       let sessionToken = token;
       if (!isHostAuthenticated(token)) {

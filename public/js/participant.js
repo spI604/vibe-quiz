@@ -163,12 +163,58 @@
     viewWinner.style.display = 'none';
     viewFinal.style.display = 'none';
 
-    // 1. WAITING / QUESTION_PREPARED (Strictly hide question from participants)
-    if (state === 'WAITING' || state === 'QUESTION_PREPARED') {
+    // 1. WAITING
+    if (state === 'WAITING') {
       viewWaiting.style.display = 'flex';
       viewQuestion.style.display = 'none';
-      waitingStatusText.textContent = state === 'WAITING' ? 'WAITING FOR QUIZ TO START' : 'QUESTION PREPARED — READY';
-      waitingQIndicator.textContent = `Question ${(data.currentQuestionIndex || 0) + 1} of ${data.totalQuestions || 15}`;
+      waitingStatusText.textContent = 'WAITING FOR QUIZ TO START';
+      waitingQIndicator.textContent = `Question 1 of ${data.totalQuestions || 15}`;
+      timerStatusLabel.textContent = 'READY';
+      timerDisplay.textContent = '00:60';
+      timerDisplay.className = 'timer-digits';
+      hasSubmitted = false;
+      selectedOption = null;
+      return;
+    }
+
+    // 2. QUESTION_PREPARED (Never keep screen blank: show placeholders 1. __________ and A. _____ B. ______ C. _____ D. _______)
+    if (state === 'QUESTION_PREPARED') {
+      viewWaiting.style.display = 'none';
+      viewQuestion.style.display = 'flex';
+      
+      const qNum = (data.currentQuestionIndex || 0) + 1;
+      questionBadge.textContent = `QUESTION ${String(qNum).padStart(2, '0')}`;
+      questionStateBadge.className = 'badge badge-indigo';
+      questionStateBadge.textContent = 'PREPARED';
+
+      // 1. __________
+      questionText.innerHTML = `
+        <div class="participant-placeholder-q">
+          <span class="q-num-highlight">${qNum}.</span>
+          <span class="placeholder-dashes">__________</span>
+        </div>
+      `;
+
+      // A. _____ B. ______ C. _____ D. _______
+      optAText.innerHTML = `<span class="placeholder-dashes">_____</span>`;
+      optBText.innerHTML = `<span class="placeholder-dashes">______</span>`;
+      optCText.innerHTML = `<span class="placeholder-dashes">_____</span>`;
+      optDText.innerHTML = `<span class="placeholder-dashes">_______</span>`;
+
+      // Buttons locked as placeholders
+      optionButtons.forEach(b => {
+        b.disabled = true;
+        b.classList.remove('selected', 'correct', 'incorrect');
+        b.classList.add('placeholder-btn');
+      });
+
+      submissionBanner.className = 'submission-status';
+      submissionBanner.style.display = 'flex';
+      submissionBanner.style.background = 'rgba(99, 102, 241, 0.12)';
+      submissionBanner.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+      submissionBanner.style.color = '#c7d2fe';
+      submissionBannerText.textContent = '⏳ QUESTION READY — HOST WILL START MOMENTARILY';
+
       timerStatusLabel.textContent = 'READY';
       timerDisplay.textContent = '00:60';
       timerDisplay.className = 'timer-digits';
@@ -192,7 +238,7 @@
 
       // Reset option button styles
       optionButtons.forEach(b => {
-        b.classList.remove('selected', 'correct', 'incorrect');
+        b.classList.remove('selected', 'correct', 'incorrect', 'placeholder-btn');
       });
 
       // Restore user submission if present
