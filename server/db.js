@@ -79,24 +79,6 @@ function initSchema() {
 const INITIAL_QUESTIONS = [
   {
     order: 1,
-    question: "Why does Google have an \"I'm Feeling Lucky\" button?",
-    a: "It opens a random website",
-    b: "It takes you directly to the top search result",
-    c: "It searches without keywords",
-    d: "It shows the most popular searches",
-    correct: "B"
-  },
-  {
-    order: 2,
-    question: "Why does your laptop charger brick often get warm?",
-    a: "It stores excess electricity",
-    b: "Some electrical energy is converted into heat",
-    c: "The battery sends heat back to the charger",
-    d: "It deliberately heats itself to charge faster",
-    correct: "B"
-  },
-  {
-    order: 3,
     question: "What helps your phone recognize the orientation of a QR code?",
     a: "The tiny dots in the center",
     b: "The three large squares near the corners",
@@ -105,7 +87,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 4,
+    order: 2,
     question: "Which company famously started as a DVD-by-mail service?",
     a: "Amazon",
     b: "Netflix",
@@ -114,7 +96,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 5,
+    order: 3,
     question: "The name \"Bluetooth\" was inspired by:",
     a: "The blue color of early wireless chips",
     b: "A medieval Scandinavian king",
@@ -123,7 +105,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 6,
+    order: 4,
     question: "What was the first video uploaded to YouTube mainly about?",
     a: "A music performance",
     b: "A person visiting a zoo",
@@ -132,7 +114,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 7,
+    order: 5,
     question: "What does \"Wi-Fi\" actually stand for?",
     a: "Wireless Internet",
     b: "Wireless Fidelity",
@@ -141,7 +123,7 @@ const INITIAL_QUESTIONS = [
     correct: "D"
   },
   {
-    order: 8,
+    order: 6,
     question: "What was Google's original name?",
     a: "SearchBox",
     b: "BackRub",
@@ -150,7 +132,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 9,
+    order: 7,
     question: "The famous term \"computer bug\" became associated with a real incident involving:",
     a: "A spider",
     b: "A moth",
@@ -159,16 +141,7 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 10,
-    question: "Which of these came first?",
-    a: "The first iPhone",
-    b: "Google Maps",
-    c: "YouTube",
-    d: "Facebook",
-    correct: "D"
-  },
-  {
-    order: 11,
+    order: 8,
     question: "Why do keyboards have a raised bump on the F and J keys?",
     a: "To make the keys easier to find without looking",
     b: "To indicate the most frequently used letters",
@@ -177,16 +150,7 @@ const INITIAL_QUESTIONS = [
     correct: "A"
   },
   {
-    order: 12,
-    question: "Which company was originally known for selling books online?",
-    a: "Amazon",
-    b: "eBay",
-    c: "Netflix",
-    d: "Google",
-    correct: "A"
-  },
-  {
-    order: 13,
+    order: 9,
     question: "Which of these is closest to what a QR code actually stores?",
     a: "A photograph",
     b: "A small amount of encoded information",
@@ -195,28 +159,26 @@ const INITIAL_QUESTIONS = [
     correct: "B"
   },
   {
-    order: 14,
+    order: 10,
     question: "Which of these was originally developed for tracking parts in automobile manufacturing?",
     a: "Bluetooth",
     b: "QR codes",
     c: "Wi-Fi",
     d: "NFC",
     correct: "B"
-  },
-  {
-    order: 15,
-    question: "Which company started as an online auction marketplace?",
-    a: "eBay",
-    b: "Spotify",
-    c: "Netflix",
-    d: "Yahoo",
-    correct: "A"
   }
 ];
 
 function seedQuestions() {
-  const count = db.prepare('SELECT COUNT(*) as count FROM questions').get().count;
-  if (count === 0) {
+  const existing = db.prepare('SELECT * FROM questions ORDER BY question_order ASC').all();
+  const needsReseed = existing.length !== INITIAL_QUESTIONS.length || 
+    (existing.length > 0 && existing[0].question_text !== INITIAL_QUESTIONS[0].question);
+
+  if (needsReseed) {
+    db.prepare('DELETE FROM submissions').run();
+    db.prepare('DELETE FROM question_results').run();
+    db.prepare('DELETE FROM questions').run();
+
     const insertStmt = db.prepare(`
       INSERT INTO questions (
         question_order, question_text, option_a, option_b, option_c, option_d, correct_option
@@ -226,6 +188,18 @@ function seedQuestions() {
     for (const q of INITIAL_QUESTIONS) {
       insertStmt.run(q.order, q.question, q.a, q.b, q.c, q.d, q.correct);
     }
+
+    db.prepare(`
+      UPDATE quiz_state SET
+        current_question_index = 0,
+        state = 'WAITING',
+        question_revealed_at = NULL,
+        polling_closes_at = NULL,
+        correct_answer_revealed = 0,
+        winner_revealed = 0,
+        quiz_completed = 0
+      WHERE id = 1
+    `).run();
   }
 }
 

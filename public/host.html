@@ -66,13 +66,13 @@
         </div>
 
         <!-- Question Counter -->
-        <div class="metric-pill">
+        <div class="metric-pill" id="metric-question-pill">
           <span class="metric-label">QUESTION</span>
-          <span class="metric-value cyan" id="metric-question-counter">1 / 15</span>
+          <span class="metric-value cyan" id="metric-question-counter">1 / 10</span>
         </div>
 
         <!-- Current State Badge -->
-        <div class="metric-pill">
+        <div class="metric-pill" id="metric-state-pill">
           <span class="metric-label">STATUS</span>
           <span id="metric-state-badge" class="badge badge-cyan">WAITING</span>
         </div>
@@ -129,7 +129,7 @@
           </div>
 
           <div style="display: flex; gap: 16px; align-items: center;">
-            <span style="font-size: 0.95rem; color: var(--text-secondary); font-family: var(--font-display);">Next Question: 1 / 15</span>
+            <span id="waiting-next-q-label" style="font-size: 0.95rem; color: var(--text-secondary); font-family: var(--font-display);">Next Question: 1 / 10</span>
           </div>
         </div>
 
@@ -256,7 +256,7 @@
         <div class="glass-card history-card">
           <div class="sidebar-title">
             <span>ROUND HISTORY</span>
-            <span class="badge badge-indigo" id="history-count-badge">0 / 15</span>
+            <span class="badge badge-indigo" id="history-count-badge">0 / 10</span>
           </div>
 
           <div class="history-list" id="history-items-list">

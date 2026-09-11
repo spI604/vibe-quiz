@@ -12,22 +12,22 @@ const mockIo = {
   }
 };
 
-// 1. Verify 15 Questions
+// 1. Verify 10 Questions
 const questions = dbHelpers.getQuestions();
-assert.strictEqual(questions.length, 15, 'Must have exactly 15 questions');
-console.log('✔ Verified 15 seeded questions present');
+assert.strictEqual(questions.length, 10, 'Must have exactly 10 questions');
+console.log('✔ Verified 10 seeded questions present');
 
 // Verify Question 1 content
 assert.strictEqual(questions[0].question_order, 1);
 assert.strictEqual(questions[0].correct_option, 'B');
-assert.ok(questions[0].question_text.includes("I'm Feeling Lucky"));
+assert.ok(questions[0].question_text.includes("orientation of a QR code"));
 console.log('✔ Verified Question 1 content & correct answer');
 
-// Verify Question 7 Wi-Fi answer is D
-const q7 = questions.find(q => q.question_order === 7);
-assert.strictEqual(q7.correct_option, 'D');
-assert.strictEqual(q7.option_d, 'Nothing specific');
-console.log('✔ Verified Question 7 content');
+// Verify Question 5 Wi-Fi answer is D
+const q5 = questions.find(q => q.question_order === 5);
+assert.strictEqual(q5.correct_option, 'D');
+assert.strictEqual(q5.option_d, 'Nothing specific');
+console.log('✔ Verified Question 5 content');
 
 // 2. Reset Quiz State for clean test
 dbHelpers.resetQuiz();

@@ -212,7 +212,7 @@
       viewWaiting.style.display = 'flex';
       viewQuestion.style.display = 'none';
       waitingStatusText.textContent = 'WAITING FOR QUIZ TO START';
-      waitingQIndicator.textContent = `Question 1 of ${data.totalQuestions || 15}`;
+      waitingQIndicator.textContent = `Question 1 of ${data.totalQuestions || 10}`;
       timerStatusLabel.textContent = 'READY';
       timerDisplay.textContent = '00:60';
       timerDisplay.className = 'timer-digits';
@@ -221,13 +221,15 @@
       return;
     }
 
+    const totalQ = data.totalQuestions || 10;
+
     // 2. QUESTION_PREPARED (Never keep screen blank: show placeholders 1. __________ and A. _____ B. ______ C. _____ D. _______)
     if (state === 'QUESTION_PREPARED') {
       viewWaiting.style.display = 'none';
       viewQuestion.style.display = 'flex';
       
       const qNum = (data.currentQuestionIndex || 0) + 1;
-      questionBadge.textContent = `QUESTION ${String(qNum).padStart(2, '0')}`;
+      questionBadge.textContent = `QUESTION ${qNum} / ${totalQ}`;
       questionStateBadge.className = 'badge badge-indigo';
       questionStateBadge.textContent = 'PREPARED';
 
@@ -275,7 +277,7 @@
       viewQuestion.style.display = 'flex';
 
       const qOrder = question.order || question.question_order || ((data.currentQuestionIndex || 0) + 1);
-      questionBadge.textContent = `QUESTION ${String(qOrder).padStart(2, '0')}`;
+      questionBadge.textContent = `QUESTION ${qOrder} / ${totalQ}`;
       questionText.textContent = question.text || question.question_text || '';
       optAText.textContent = question.option_a || question.a || '';
       optBText.textContent = question.option_b || question.b || '';

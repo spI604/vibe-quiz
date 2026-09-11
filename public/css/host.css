@@ -56,17 +56,20 @@
 .host-metrics-group {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .metric-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 8px 18px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .metric-label {
@@ -76,6 +79,7 @@
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .metric-value {
@@ -83,6 +87,8 @@
   font-size: 1.15rem;
   font-weight: 700;
   color: #ffffff;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .metric-value.cyan {
@@ -97,6 +103,21 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1200px) {
+  .host-top-nav {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .host-metrics-group {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-top: 4px;
+  }
 }
 
 /* Main Two-Column Stage Grid */

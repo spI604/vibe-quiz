@@ -220,13 +220,18 @@
     const { state, currentQuestionIndex, totalQuestions, currentQuestion, connectedTeamsCount, submissionsCount, history, finalLeaderboard, winnerInfo } = data;
 
     const qNum = (currentQuestionIndex !== undefined ? currentQuestionIndex : (currentQuestion ? currentQuestion.question_order - 1 : 0)) + 1;
-    const totalQ = totalQuestions || 15;
+    const totalQ = totalQuestions || 10;
 
     // Update Top Metric Pills
     metricTeamsJoined.textContent = connectedTeamsCount || 0;
     waitingTeamsCountPill.textContent = `${connectedTeamsCount || 0} TEAMS`;
     metricQuestionCounter.textContent = `${qNum} / ${totalQ}`;
     metricStateBadge.textContent = state ? state.replace('_', ' ') : 'WAITING';
+
+    const waitingNextQLabel = document.getElementById('waiting-next-q-label');
+    if (waitingNextQLabel) {
+      waitingNextQLabel.textContent = `Next Question: ${qNum} / ${totalQ}`;
+    }
 
     // Reset All Buttons Visibility
     btnStartQuiz.style.display = 'none';
@@ -248,7 +253,7 @@
     });
 
     // Render Sidebar History
-    renderHistory(history || []);
+    renderHistory(history || [], totalQ);
 
     // STATE 1: WAITING
     if (state === 'WAITING') {
@@ -264,9 +269,9 @@
     // STATE 7: QUIZ COMPLETE
     if (state === 'QUIZ_COMPLETE') {
       stageViewFinal.style.display = 'block';
-      stageQOrder.textContent = 'QUIZ COMPLETE';
+      stageQOrder.textContent = `COMPLETED (${totalQ}/${totalQ})`;
       stageMiniStatus.className = 'badge badge-gold';
-      stageMiniStatus.textContent = 'FINAL RESULTS';
+      stageMiniStatus.textContent = 'QUIZ ENDED';
       stageActionHint.textContent = 'Quiz finished. Final standings and champions declared.';
 
       if (finalLeaderboard && finalLeaderboard.length > 0) {
@@ -295,7 +300,7 @@
     // ACTIVE STAGE (STATES 2, 3, 4, 5, 6)
     // Always render stageViewActive for all active question states
     stageViewActive.style.display = 'flex';
-    stageQOrder.textContent = `QUESTION ${String(qNum).padStart(2, '0')}`;
+    stageQOrder.textContent = `QUESTION ${qNum} / ${totalQ}`;
     hostSubmissionsVal.textContent = `${submissionsCount || 0} / ${connectedTeamsCount || 0}`;
 
     // STATE 2: QUESTION_PREPARED (Strictly hide question until host reveals it!)
@@ -390,7 +395,7 @@
         stageActionHint.textContent = `Round winner recorded. Click 'NEXT QUESTION' to proceed to Question ${qNum + 1}.`;
         btnNextQuestion.style.display = 'inline-flex';
       } else {
-        stageActionHint.textContent = "All 15 questions completed! Click 'VIEW FINAL RESULTS'.";
+        stageActionHint.textContent = `All ${totalQ} questions completed! Click 'VIEW FINAL RESULTS'.`;
         btnViewFinal.style.display = 'inline-flex';
       }
     }
@@ -407,8 +412,8 @@
   }
 
   // Render Sidebar History
-  function renderHistory(history) {
-    historyCountBadge.textContent = `${history.length} / 15`;
+  function renderHistory(history, totalQ = 10) {
+    historyCountBadge.textContent = `${history.length} / ${totalQ}`;
     if (history.length === 0) {
       historyItemsList.innerHTML = `
         <div style="color: var(--text-muted); font-size: 0.85rem; padding: 20px 10px; text-align: center;">
