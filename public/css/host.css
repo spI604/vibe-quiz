@@ -293,8 +293,36 @@
   border-color: var(--emerald-winner);
 }
 
+.stage-option-card.locked-placeholder {
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.01);
+  border-style: dashed;
+}
+
+.stage-option-card.locked-placeholder .opt-text {
+  filter: blur(4px);
+  opacity: 0.4;
+  user-select: none;
+}
+
 .stage-option-card.dimmed {
   opacity: 0.35;
+}
+
+.question-hidden-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Live Timer & Submission Progress Bar */

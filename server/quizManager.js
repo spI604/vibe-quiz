@@ -101,12 +101,19 @@ class QuizManager {
     if (stateInfo.currentQuestion) {
       payload.question = {
         order: stateInfo.currentQuestion.question_order,
+        question_order: stateInfo.currentQuestion.question_order,
         text: stateInfo.currentQuestion.question_text,
+        question_text: stateInfo.currentQuestion.question_text,
         option_a: stateInfo.currentQuestion.option_a,
         option_b: stateInfo.currentQuestion.option_b,
         option_c: stateInfo.currentQuestion.option_c,
-        option_d: stateInfo.currentQuestion.option_d
+        option_d: stateInfo.currentQuestion.option_d,
+        a: stateInfo.currentQuestion.option_a,
+        b: stateInfo.currentQuestion.option_b,
+        c: stateInfo.currentQuestion.option_c,
+        d: stateInfo.currentQuestion.option_d
       };
+      payload.currentQuestion = payload.question;
 
       // Only reveal correct_option if state is ANSWER_REVEALED or later
       if (stateInfo.correctAnswerRevealed) {
@@ -453,7 +460,31 @@ class QuizManager {
   // Broadcast state change to all clients
   broadcastStateChange() {
     const hostPayload = this.getHostPayload();
-    this.io.emit('quiz_state_change', hostPayload);
+    const defaultParticipantPayload = this.getParticipantPayload();
+
+    if (this.io && typeof this.io.to === 'function') {
+      // 1. Send authoritative host payload to host_room
+      this.io.to('host_room').emit('quiz_state_change', hostPayload);
+
+      // 2. Send sanitized participant payload to each participant socket
+      const participantRoom = this.io.sockets && this.io.sockets.adapter && this.io.sockets.adapter.rooms
+        ? this.io.sockets.adapter.rooms.get('participant_room')
+        : null;
+
+      if (participantRoom && participantRoom.size > 0) {
+        for (const socketId of participantRoom) {
+          const sock = this.io.sockets.sockets.get(socketId);
+          if (sock) {
+            sock.emit('quiz_state_change', this.getParticipantPayload(sock.teamId));
+          }
+        }
+      } else {
+        // Fallback if room not yet populated
+        this.io.emit('quiz_state_change', defaultParticipantPayload);
+      }
+    } else if (this.io && typeof this.io.emit === 'function') {
+      this.io.emit('quiz_state_change', hostPayload);
+    }
   }
 }
 

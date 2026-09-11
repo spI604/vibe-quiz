@@ -285,23 +285,40 @@
     if (currentQuestion) {
       stageViewActive.style.display = 'flex';
       stageQOrder.textContent = `QUESTION ${String(currentQuestion.question_order).padStart(2, '0')}`;
+      hostSubmissionsVal.textContent = `${submissionsCount || 0} / ${connectedTeamsCount || 0}`;
+
+      // STATE 2: QUESTION_PREPARED (Strictly hide question until host reveals it!)
+      if (state === 'QUESTION_PREPARED') {
+        stageMiniStatus.className = 'badge badge-indigo';
+        stageMiniStatus.textContent = 'PREPARED (HIDDEN)';
+        stageActionHint.textContent = "Question is hidden from stage and participants. Click 'REVEAL QUESTION' to unveil and start 60s countdown.";
+        
+        stageQuestionText.innerHTML = `
+          <div class="question-hidden-placeholder">
+            <span class="status-dot"></span>
+            <span>QUESTION HIDDEN &bull; CLICK &quot;REVEAL QUESTION&quot; TO UNVEIL</span>
+          </div>
+        `;
+        
+        hostOptAText.textContent = 'Option A (Hidden)';
+        hostOptBText.textContent = 'Option B (Hidden)';
+        hostOptCText.textContent = 'Option C (Hidden)';
+        hostOptDText.textContent = 'Option D (Hidden)';
+        stageOptionCards.forEach(c => c.classList.add('locked-placeholder'));
+
+        hostTimerNum.textContent = '00:60';
+        hostTimerNum.className = 'stage-timer-ring-num';
+        btnRevealQuestion.style.display = 'inline-flex';
+        return;
+      }
+
+      // STATES 3, 4, 5, 6: Unveil full question and options
       stageQuestionText.textContent = currentQuestion.question_text;
       hostOptAText.textContent = currentQuestion.option_a;
       hostOptBText.textContent = currentQuestion.option_b;
       hostOptCText.textContent = currentQuestion.option_c;
       hostOptDText.textContent = currentQuestion.option_d;
-
-      hostSubmissionsVal.textContent = `${submissionsCount || 0} / ${connectedTeamsCount || 0}`;
-
-      // STATE 2: QUESTION_PREPARED
-      if (state === 'QUESTION_PREPARED') {
-        stageMiniStatus.className = 'badge badge-indigo';
-        stageMiniStatus.textContent = 'PREPARED';
-        stageActionHint.textContent = "Question prepared. Click 'REVEAL QUESTION' to begin 60-second polling for participants.";
-        hostTimerNum.textContent = '00:60';
-        hostTimerNum.className = 'stage-timer-ring-num';
-        btnRevealQuestion.style.display = 'inline-flex';
-      }
+      stageOptionCards.forEach(c => c.classList.remove('locked-placeholder'));
 
       // STATE 3: POLLING_ACTIVE
       if (state === 'POLLING_ACTIVE') {

@@ -170,6 +170,10 @@ io.on('connection', (socket) => {
       const team = dbHelpers.findOrCreateTeam(validated);
       registeredTeamCode = team.team_code;
       registeredTeamId = team.id;
+      socket.teamId = team.id;
+      socket.teamCode = team.team_code;
+      socket.join('participant_room');
+
       quizManager.registerTeamConnection(socket.id, registeredTeamCode);
 
       const payload = quizManager.getParticipantPayload(team.id);
@@ -207,6 +211,7 @@ io.on('connection', (socket) => {
     const { token, password } = data || {};
     if (isHostAuthenticated(token) || (password && String(password).trim() === String(HOST_PASSWORD).trim())) {
       authenticatedHost = true;
+      socket.join('host_room');
       let sessionToken = token;
       if (!isHostAuthenticated(token)) {
         sessionToken = crypto.randomBytes(32).toString('hex');

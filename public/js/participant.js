@@ -148,8 +148,14 @@
 
   // Main State Processor
   function handleStateUpdate(data) {
+    if (!data) return;
     currentQuizState = data;
-    const { state, question, userSubmission, correctOption, winnerInfo, finalLeaderboard } = data;
+    const state = data.state;
+    const question = data.question || data.currentQuestion;
+    const userSubmission = data.userSubmission;
+    const correctOption = data.correctOption;
+    const winnerInfo = data.winnerInfo;
+    const finalLeaderboard = data.finalLeaderboard;
 
     // Reset view visibility
     viewWaiting.style.display = 'none';
@@ -157,10 +163,11 @@
     viewWinner.style.display = 'none';
     viewFinal.style.display = 'none';
 
-    // 1. WAITING / QUESTION_PREPARED
+    // 1. WAITING / QUESTION_PREPARED (Strictly hide question from participants)
     if (state === 'WAITING' || state === 'QUESTION_PREPARED') {
       viewWaiting.style.display = 'flex';
-      waitingStatusText.textContent = state === 'WAITING' ? 'WAITING FOR QUIZ TO START' : 'WAITING FOR QUESTION';
+      viewQuestion.style.display = 'none';
+      waitingStatusText.textContent = state === 'WAITING' ? 'WAITING FOR QUIZ TO START' : 'QUESTION PREPARED — READY';
       waitingQIndicator.textContent = `Question ${(data.currentQuestionIndex || 0) + 1} of ${data.totalQuestions || 15}`;
       timerStatusLabel.textContent = 'READY';
       timerDisplay.textContent = '00:60';
@@ -171,14 +178,17 @@
     }
 
     // 2. POLLING_ACTIVE / POLLING_CLOSED / ANSWER_REVEALED / WINNER_CHECKED
-    if (question) {
+    if (question && (state === 'POLLING_ACTIVE' || state === 'POLLING_CLOSED' || state === 'ANSWER_REVEALED' || state === 'WINNER_CHECKED')) {
+      viewWaiting.style.display = 'none';
       viewQuestion.style.display = 'flex';
-      questionBadge.textContent = `QUESTION ${String(question.order).padStart(2, '0')}`;
-      questionText.textContent = question.text;
-      optAText.textContent = question.option_a;
-      optBText.textContent = question.option_b;
-      optCText.textContent = question.option_c;
-      optDText.textContent = question.option_d;
+
+      const qOrder = question.order || question.question_order || ((data.currentQuestionIndex || 0) + 1);
+      questionBadge.textContent = `QUESTION ${String(qOrder).padStart(2, '0')}`;
+      questionText.textContent = question.text || question.question_text || '';
+      optAText.textContent = question.option_a || question.a || '';
+      optBText.textContent = question.option_b || question.b || '';
+      optCText.textContent = question.option_c || question.c || '';
+      optDText.textContent = question.option_d || question.d || '';
 
       // Reset option button styles
       optionButtons.forEach(b => {
